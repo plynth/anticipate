@@ -1,48 +1,14 @@
 import inspect
 import types
+from anticipate.adapt import adapt, adapt_all, register_adapter, AdaptError, AdaptErrors
+import sys
 
-__all__ = [
-    'anticipate',
-]
+__all__ = []
 
-class AdaptError(Exception):
-    """
-    TODO AdaptError needs to be usable by other modules to be able to catch adapting errors.
-    Should consider making adapt its own package.
-    """
-    pass
-
-def adapt(obj, cls):
-    """
-    Will adapt `obj` to an instance of `cls`.
-
-    First sees if `obj` has an `__adapt__` method and uses it to adapt. If that fails
-    it checks if `cls` has an `__adapt__` classmethod and uses it to adapt. If that
-    fails, a `TypeError` is raised.
-
-    TODI
-    """
-    if obj is None:
-        return obj
-    elif isinstance(obj, cls):
-        return obj
-
-    if hasattr(obj, '__adapt__'):
-        try:
-            return obj.__adapt__(cls)
-        except AdaptError as e:
-            pass
-
-    if hasattr(cls, '__adapt__'):
-        return cls.__adapt__(obj)
-
-    raise AdaptError('Could not adapt %r to %r' % (obj, cls))
-
-def adapt_all(iter, cls):
-    """
-    Returns a generator that will adapt all objects in an iterable to `cls`
-    """
-    return (adapt(obj, cls) for obj in iter)
+class AnticipateTypeError(Exception):
+    def __init__(self, message, errors=None):
+        super(AnticipateTypeError, self).__init__(message)
+        self.errors = errors
 
 def strictly_anticipate(returns=None, **params):
     """
@@ -51,7 +17,7 @@ def strictly_anticipate(returns=None, **params):
     :param returns: Defines the type of object this function is expected to return.
                     Python basetypes as well as any object is supported. `None` means
                     that nothing can be returned. Use a list (ex: `[MyClass]`) to denote
-                    that an iterable of `MyClass` will be returned. 
+                    that an iterable of `MyClass` will be returned.
     :param params: A list of key/type pairs. Each key corresponds to a parameter of the wrapped
                    function. The type is the type of object the function expects for that parameter.
 
@@ -67,7 +33,7 @@ def strictly_anticipate(returns=None, **params):
     """
     returns_iter = False
     if isinstance(returns, list):
-        # Return value is a list of items matching the first element                        
+        # Return value is a list of items matching the first element
         if len(returns) == 1:
             returns = returns[0]
             returns_iter = True
@@ -94,7 +60,7 @@ def strictly_anticipate(returns=None, **params):
 
                 return v
             func = check_return
-        
+
         func.__unadapted__ = original
 
         return func
@@ -115,7 +81,7 @@ class anticipate_wrapper(object):
         self.bound_to = None
 
         if isinstance(self.returns, list):
-            # Return value is a list of items matching the first element                        
+            # Return value is a list of items matching the first element
             if len(self.returns) == 1:
                 self.returns = self.returns[0]
                 self.adapt = adapt_all
@@ -145,7 +111,7 @@ class anticipate_wrapper(object):
             result = self.func(self.bound_to, *args, **kwargs)
         else:
             result = self.func(*args, **kwargs)
-        return result       
+        return result
 
     def __call__(self, *args, **kwargs):
         """
@@ -157,10 +123,16 @@ class anticipate_wrapper(object):
         else:
             result = self.func(*args, **kwargs)
 
+        errors = None
         try:
             return self.adapt(result, self.returns)
-        except AdaptError as e:                    
-            raise TypeError('Return value %r does not match anticipated type %r' % (type(result), self.returns))
+        except AdaptErrors as e:
+            errors = e.errors
+        except AdaptError as e:
+            errors = [e]
+
+        raise AnticipateTypeError('Return value %r does not match anticipated type %r' % (type(result), self.returns), errors=errors)
+
 
 
 class anticipate(object):
@@ -170,7 +142,7 @@ class anticipate(object):
     :param returns: Defines the type of object this function is expected to return.
                     Python basetypes as well as any object is supported. `None` means
                     that nothing can be returned. Use a list (ex: `[MyClass]`) to denote
-                    that an iterable of `MyClass` will be returned. 
+                    that an iterable of `MyClass` will be returned.
     :param params: A list of key/type pairs. Each key corresponds to a parameter of the wrapped
                    function. The type is the type of object the function expects for that parameter.
 
@@ -183,10 +155,32 @@ class anticipate(object):
             }
 
 
-    """    
+    """
     def __init__(self, returns=None, **params):
         self.returns = returns
         self.params = params
 
     def __call__(self, func):
         return anticipate_wrapper(func, self.returns, self.params)
+
+class adapter(object):
+    """
+    A decorator that registers an adapter
+
+    :param from_cls: The class to convert from.
+    :param to_cls: The class to convert to.
+
+    Example::
+
+        @adapter(int, str)
+        def to_str(input, to_cls):
+            return str(input)
+
+    """
+    def __init__(self, from_cls, to_cls):
+        self.from_cls = from_cls
+        self.to_cls = to_cls
+
+    def __call__(self, func):
+        register_adapter(self.from_cls, self.to_cls, func)
+        return func
