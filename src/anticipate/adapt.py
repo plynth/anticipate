@@ -1,6 +1,7 @@
 import inspect
 import itertools
 import sys
+import traceback
 
 __adapters__ = {}
 __mro__ = {}
@@ -18,7 +19,26 @@ class AdaptError(Exception):
 class AdaptErrors(AdaptError):
     def __init__(self, message, errors=None):
         super(AdaptErrors, self).__init__(message)
-        self.errors = errors
+        self.errors = []
+        if errors:
+            self.add_errors(errors)
+
+    def add_error(self, func, ex_type, ex, tb):
+        self.errors.append((func, ex_type, ex, tb))
+
+    def add_errors(self, errors):
+        for e in errors:
+            self.add_error(*e)
+
+    def errors_string(self):
+        """
+        Returns all errors as a string
+        """
+        output = []
+        for e in self.errors:
+            output.append('%s: %s in %s:' % (e[1], e[2], e[0]))
+            output.append(''.join(traceback.format_tb(e[3])))
+        return '\n'.join(output)
 
 class AdapterExists(Exception):
     pass
@@ -54,20 +74,23 @@ def adapt(obj, to_cls):
         try:
             return obj.__adapt__(to_cls)
         except (AdaptError, TypeError) as e:
-            errors.append((obj.__adapt__, e))
+            ex_type, ex, tb = sys.exc_info()
+            errors.append((obj.__adapt__, ex_type, ex, tb))
 
     if hasattr(to_cls, '__adapt__') and to_cls.__adapt__:
         try:
             return to_cls.__adapt__(obj)
         except (AdaptError, TypeError) as e:
-            errors.append((to_cls.__adapt__, e))
+            ex_type, ex, tb = sys.exc_info()
+            errors.append((to_cls.__adapt__, ex_type, ex, tb))
 
     for k in get_adapter_path(obj, to_cls):
         if k in __adapters__:
             try:
                 return __adapters__[k](obj, to_cls)
             except (AdaptError, TypeError) as e:
-                errors.append((__adapters__[k], e))
+                ex_type, ex, tb = sys.exc_info()
+                errors.append((__adapters__[k], ex_type, ex, tb))
                 break
 
     raise AdaptErrors('Could not adapt %r to %r' % (obj, to_cls), errors=errors)
