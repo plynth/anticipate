@@ -16,7 +16,7 @@ def release():
 
     version = open('VERSION.txt').read().strip()
 
-    existing_tag = local(clom.git.tag('-l', version))
+    existing_tag = local(clom.git.tag('-l', version), capture=True)
     if not existing_tag.strip():
         print('Releasing %s...' % version)
         local(clom.git.flow.release.start(version))
