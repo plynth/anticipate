@@ -12,7 +12,7 @@ def main():
         download_url='http://github.com/six8/anticipate',
         keywords=['packaging'],
         license='MIT',
-        description='',
+        description='A type checking and adapting library',
         classifiers = [
             "Programming Language :: Python",
             "Intended Audience :: Developers",

@@ -1,5 +1,6 @@
 from fabric.api import local, task, abort, settings
 from clom import clom
+from fabric.contrib.console import confirm
 
 @task
 def release():
@@ -15,8 +16,13 @@ def release():
 
     version = open('VERSION.txt').read().strip()
 
-    print('Releasing %s...' % version)
-    local(clom.git.tag(version, a=True, m='Release %s' % version))
-    local(clom.git.push('origin', 'HEAD'))
-    local(clom.git.push('origin', version))
-    local(clom.python('setup.py', 'sdist', 'upload'))
+    existing_tag = local(clom.git.tag('-l', version))
+    if not existing_tag.strip():
+        print('Releasing %s...' % version)
+        local(clom.git.flow.release.start(version))
+        local(clom.git.flow.release.finish(version, m='Release-%s' % version))
+
+    if confirm('Push %s to pypi?' % version, default=True):
+        local(clom.git.push('origin', 'HEAD'))
+        local(clom.git.push('origin', version))
+        local(clom.python('setup.py', 'sdist', 'upload'))
