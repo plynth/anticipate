@@ -2,6 +2,11 @@
 Anticipate
 ==========
 
+.. image:: https://secure.travis-ci.org/six8/anticipate.png
+    :target: http://travis-ci.org/six8/anticipate
+    :alt: Build Status
+
+
 Expect the unexpected, but get what you want.
 
 ::
