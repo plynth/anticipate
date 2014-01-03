@@ -2,7 +2,7 @@ import inspect
 import types
 from anticipate.adapt import adapt, adapt_all, register_adapter, AdaptError, AdaptErrors
 import sys
-from functools import partial
+from functools import partial, update_wrapper
 
 __all__ = []
 
@@ -44,6 +44,9 @@ class anticipate_wrapper(object):
                     raise TypeError('An anticipated list can only contain one type')
             else:
                 self.param_adapters[key] = partial(adapt, to_cls=p)
+
+        # Make this look like the original function
+        update_wrapper(self, self.func)
 
     def __get__(self, instance, owner):
         """
