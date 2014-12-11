@@ -61,5 +61,73 @@ def test_adapt_params():
     assert test(a, a, a) == ('fizzbuzz', 22, a)
 
 
+def test_unadapted():
+    """
+    Ensure we can call a method without it being Adapted
+    """
+    @anticipate(foo=str, bar=int)
+    def test(foo, bar):
+        return foo, bar
+
+    assert test(1, '0') == ('1', 0)
+    assert test.__unadapted__(1, '0') == (1, '0')
 
 
+def test_bound_to():
+    """
+    Ensure that an anticipated method gets bound to the subclass,
+    not it's base class.
+    """
+    class BaseClass(object):
+        @anticipate()
+        def get_wrapped_self(self):
+            return self
+
+    class SubClass(BaseClass):
+        def get_self(self):
+            return self
+            
+
+
+    a = BaseClass()
+    assert a.get_wrapped_self() == a
+    
+
+    b = SubClass()
+    assert b.get_wrapped_self() == b
+    assert b.get_wrapped_self() == b.get_self()
+
+
+def test_instance_bound_to():
+    """
+    Ensure that an anticipated method gets bound to each instance
+    instead of its first instance.
+    """
+
+    class BaseClass(object):
+        pass
+
+    class SubClass(BaseClass):
+        def __init__(self, *args, **kwargs):
+            super(SubClass, self).__init__(*args, **kwargs)
+            self.thing = {}
+
+        @anticipate()
+        def get_wrapped_self(self):
+            return self
+
+        def get_self(self):
+            return self
+
+    b = SubClass()
+    assert b.get_wrapped_self() == b
+    assert b.get_wrapped_self() == b.get_self()        
+
+    assert id(b.get_wrapped_self().thing) == id(b.get_self().thing)
+
+
+    c = SubClass()
+    assert c.get_wrapped_self() == c
+    assert c.get_wrapped_self() == c.get_self()  
+
+    assert id(c.get_wrapped_self().thing) == id(c.get_self().thing)

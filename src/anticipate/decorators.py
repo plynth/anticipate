@@ -23,7 +23,6 @@ class anticipate_wrapper(object):
         self.params = params
         self.adapt = adapt
         self.strict = strict
-        self.bound_to = None
 
         if isinstance(self.returns, list):
             # Return value is a list of items matching the first element
@@ -55,23 +54,13 @@ class anticipate_wrapper(object):
         `__get__` will be called in this case which gives us an opportunity to bind to
         the instance.
         """
-        if instance is None:
-            return self
-        elif not self.bound_to:
-            # Bind this method to an object instance
-            self.bound_to = instance
-
-        return self
+        return partial(self, instance)
 
     def __unadapted__(self, *args, **kwargs):
         """
         Call the wrapped function without adapting.
         """
-        if self.bound_to:
-            result = self.func(self.bound_to, *args, **kwargs)
-        else:
-            result = self.func(*args, **kwargs)
-        return result
+        return self.func(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
         """
@@ -103,10 +92,7 @@ class anticipate_wrapper(object):
 
                         raise AnticipateTypeError('Input value %r for %s does not match anticipated type %r' % (type(val), key, self.params[key]), errors=errors)
 
-        if self.bound_to:
-            result = self.func(self.bound_to, *args, **kwargs)
-        else:
-            result = self.func(*args, **kwargs)
+        result = self.func(*args, **kwargs)
 
         if self.returns:
             errors = None
