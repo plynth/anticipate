@@ -3,6 +3,7 @@ import types
 from anticipate.adapt import adapt, adapt_all, register_adapter, AdaptError, AdaptErrors
 import sys
 from functools import partial, update_wrapper
+from itertools import izip
 
 __all__ = []
 
@@ -32,7 +33,7 @@ class anticipate_wrapper(object):
             else:
                 raise TypeError('An anticipated list can only contain one type')
 
-        self.arg_names = [n for n in inspect.getargspec(func)[0] if n != 'self']
+        self.arg_names = [n for n in inspect.getargspec(func)[0]]
         self.param_adapters = {}
         for key, p in self.params.items():
             if isinstance(p, list):
@@ -54,7 +55,8 @@ class anticipate_wrapper(object):
         `__get__` will be called in this case which gives us an opportunity to bind to
         the instance.
         """
-        return partial(self, instance)
+
+        return partial(self.__call__, instance)
 
     def __unadapted__(self, *args, **kwargs):
         """
@@ -62,35 +64,40 @@ class anticipate_wrapper(object):
         """
         return self.func(*args, **kwargs)
 
+    def _adapt_param(self, key, val):
+        """
+        Adapt the value if an adapter is defined.
+        """
+        if key in self.param_adapters:
+            try:
+                return self.param_adapters[key](val)
+            except (AdaptError, AdaptErrors) as e:
+                if hasattr(e, 'errors'):
+                    errors = e.errors
+                else:
+                    errors = [e]
+
+                raise AnticipateTypeError('Input value %r for %s does not match anticipated type %r' % (type(val), key, self.params[key]), errors=errors)
+        else:
+            return val
+
     def __call__(self, *args, **kwargs):
         """
         Call the wrapped function, adapting if needed.
         """
 
         if args and self.arg_names:
-            # Turn any named arguments into keyword arguments
             args = list(args)
-            for name in self.arg_names:
-                if name not in kwargs:
-                    try:
-                        kwargs[name] = args.pop(0)
-                    except IndexError:
-                        break
+
+            # Replace args inline that have adapters
+            for i, (key, val) in enumerate(izip(self.arg_names, args)):
+                args[i] = self._adapt_param(key, val)
 
         if kwargs and self.params:
             # Adapt all adaptable arguments
             # TODO Strict checking
             for key, val in kwargs.items():
-                if key in self.param_adapters:
-                    try:
-                        kwargs[key] = self.param_adapters[key](val)
-                    except (AdaptError, AdaptErrors) as e:
-                        if hasattr(e, 'errors'):
-                            errors = e.errors
-                        else:
-                            errors = [e]
-
-                        raise AnticipateTypeError('Input value %r for %s does not match anticipated type %r' % (type(val), key, self.params[key]), errors=errors)
+                kwargs[key] = self._adapt_param(key, val)
 
         result = self.func(*args, **kwargs)
 

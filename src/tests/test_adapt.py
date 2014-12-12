@@ -120,14 +120,130 @@ def test_instance_bound_to():
             return self
 
     b = SubClass()
-    assert b.get_wrapped_self() == b
-    assert b.get_wrapped_self() == b.get_self()        
+    assert b.get_wrapped_self() is b
+    assert b.get_wrapped_self() is b.get_self()        
 
     assert id(b.get_wrapped_self().thing) == id(b.get_self().thing)
 
 
     c = SubClass()
-    assert c.get_wrapped_self() == c
-    assert c.get_wrapped_self() == c.get_self()  
+    assert c.get_wrapped_self() is c
+    assert c.get_wrapped_self() is c.get_self()  
 
     assert id(c.get_wrapped_self().thing) == id(c.get_self().thing)
+
+
+def test_args():
+    """
+    Verify that `self` is the correct instance when
+    additional positional arguments are passed in.
+    """
+    class Test(object):
+        @anticipate()
+        def get_args(self, arg, *args):
+            return self, arg, args
+
+        @anticipate()
+        def get_arg(self, arg):
+            return self, arg
+
+        @anticipate()
+        def get_self(self, foo=None):
+            return self
+
+        @anticipate(arg=int)
+        def get_arg_int(self, arg):
+            return self, arg
+
+        @anticipate(arg=int)
+        def get_args_int(self, arg, *args):
+            return self, arg, args
+
+    @anticipate(arg=int)
+    def get_arg_int(arg):
+        return arg
+
+    obj1 = object()
+    obj2 = object()
+    obj3 = object()
+
+    b = Test()
+
+    assert b.get_self() is b
+
+    # Verify that if there are no adapters, *args pass through
+    r = b.get_args(obj1, obj2, obj3)
+    
+    assert r[0] is b
+    assert r[1] is obj1
+    assert r[2][0] is obj2
+    assert r[2][1] is obj3
+
+    # Verify that if there are adapters, positional args get adapted
+    r = b.get_args_int('1', obj2, obj3)
+    
+    assert r[0] is b
+    assert r[1] == 1
+    assert r[2][0] is obj2
+    assert r[2][1] is obj3
+
+    # Verify that if there are no adapters, positional args pass through
+    r = b.get_arg(obj1)
+
+    assert r[0] is b
+    assert r[1] is obj1
+
+    # Verify that if there are no adapters, keyword args pass through
+    r = b.get_arg(arg=obj1)
+
+    assert r[0] is b
+    assert r[1] is obj1
+
+    # Verify that keyword args are adapted
+    r = b.get_arg_int(arg='1')
+
+    assert r[0] is b
+    assert r[1] == 1
+
+    assert get_arg_int(arg='1') == 1
+
+def test_kwargs():
+    """
+    Verify that kwargs can be adapted
+    """
+    class Test(object):
+        @anticipate(foo=int, bar=str)
+        def get_args(self, arg, **kwargs):
+            return arg, kwargs
+
+    @anticipate(foo=int, bar=str)
+    def get_args(arg, **kwargs):
+        return arg, kwargs
+
+    t = Test()
+
+    obj = object()
+
+    r = t.get_args(obj, foo='2', bar=3)
+    assert r[0] is obj
+    assert r[1]['foo'] == 2
+    assert r[1]['bar'] == '3'
+
+    r = get_args(obj, foo='2', bar=3)
+    assert r[0] is obj
+    assert r[1]['foo'] == 2
+    assert r[1]['bar'] == '3'    
+
+    r = t.get_args(arg=obj, foo='2', bar=3)
+    assert r[0] is obj
+    assert r[1]['foo'] == 2
+    assert r[1]['bar'] == '3'
+
+    r = get_args(arg=obj, foo='2', bar=3)
+    assert r[0] is obj
+    assert r[1]['foo'] == 2
+    assert r[1]['bar'] == '3'    
+
+
+
+
