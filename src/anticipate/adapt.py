@@ -95,11 +95,19 @@ def adapt(obj, to_cls):
 
     raise AdaptErrors('Could not adapt %r to %r' % (obj, to_cls), errors=errors)
 
-def adapt_all(iter, to_cls):
+
+def adapt_all(iterable, to_cls):
     """
     Returns a generator that will adapt all objects in an iterable to `cls`
+
+    If `iterable` is `None`, an empty generator will be returned.
     """
-    return (adapt(obj, to_cls) for obj in iter)
+    if iterable is None:
+        # Use an empty tuple so we return an empty generator
+        iterable = ()
+
+    return (adapt(obj, to_cls) for obj in iterable)
+
 
 def register_adapter(from_classes, to_classes, func):
     """
