@@ -1,4 +1,6 @@
+import pytest
 from anticipate import adapt, adapter, anticipate
+
 
 def test_mro():
     class Foo(object):
@@ -245,5 +247,68 @@ def test_kwargs():
     assert r[1]['bar'] == '3'    
 
 
+def test_adapt_all_generator():
+    """
+    Verify adapt_all returns a generator
+    """
+    int_like = ['1', 2.0]
+    
+    generator = adapt.adapt_all(int_like, int)
+    assert generator.next() == 1
+    assert generator.next() == 2
 
+    assert list(adapt.adapt_all(int_like, int)) == [1, 2]
+
+
+def test_adapt_all_with_none():
+    """
+    Verify passing None to adapt_all returns an empty generator
+    """
+    generator = adapt.adapt_all(None, int)
+
+    with pytest.raises(StopIteration):
+        generator.next()
+
+    assert list(adapt.adapt_all(None, int)) == []
+    
+
+def test_anticipate_list():
+    """
+    Verify using a list for a parameter adapts the input to a generator
+    that adapts each value in the input.
+    """
+    @anticipate(items=[int])
+    def get_list(items):
+        return items
+
+    int_like = ['1', 2.0]
+
+    r = get_list(int_like)
+    assert r.next() == 1
+    assert r.next() == 2.0
+
+    # Works on list input
+    assert list(get_list(int_like)) == [1, 2]
+
+    # Works on tuple input
+    assert list(get_list((4.0, 5.0, 6.0))) == [4, 5, 6]
+
+    # Works on generator input
+    assert list(get_list(iter((4.0, 5.0, 6.0)))) == [4, 5, 6]
+
+
+def test_anticipate_list_with_none():
+    """
+    Verify passing None for a parameter that expects a list returns an
+    empty generator.
+    """
+    @anticipate(items=[int])
+    def get_list(items):
+        return items
+
+    generator = get_list(None)
+    with pytest.raises(StopIteration):
+        generator.next()
+    
+    assert list(get_list(None)) == []
 
