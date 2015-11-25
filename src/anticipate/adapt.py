@@ -98,15 +98,14 @@ def adapt(obj, to_cls):
 
 def adapt_all(iterable, to_cls):
     """
-    Returns a generator that will adapt all objects in an iterable to `cls`
+    Returns a list of items from adapting each item in iterable to `cls`
 
-    If `iterable` is `None`, an empty generator will be returned.
+    If `iterable` is `None`, an empty list will be returned.
     """
     if iterable is None:
-        # Use an empty tuple so we return an empty generator
-        iterable = ()
+        return []
 
-    return (adapt(obj, to_cls) for obj in iterable)
+    return [adapt(obj, to_cls) for obj in iterable]
 
 
 def register_adapter(from_classes, to_classes, func):
@@ -126,3 +125,10 @@ def register_adapter(from_classes, to_classes, func):
         if key in __adapters__:
             raise AdapterExists('%r to %r already exists.' % key)
         __adapters__[key] = func
+
+
+def clear_adapters():
+    """
+    Unregister any previously defined adapters.
+    """
+    __adapters__.clear()

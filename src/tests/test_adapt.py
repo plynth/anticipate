@@ -1,5 +1,20 @@
 import pytest
 from anticipate import adapt, adapter, anticipate
+from anticipate.adapt import clear_adapters
+from anticipate.exceptions import AnticipateParamError, AnticipateErrors, \
+    AnticipateError
+
+
+def setup_function(function):
+    """
+    Make sure there are no adapters defined before start of test
+    """
+    clear_adapters()
+
+    # Setup a basic int adapter for all tests
+    @adapter((basestring, float, int), (int, basestring))
+    def to_int(obj, to_cls):
+        return to_cls(obj)
 
 
 def test_mro():
@@ -48,8 +63,8 @@ def test_adapt_params():
         def __int__(self):
             return 22
 
-    @adapter((basestring, int, float, FizzBuzz), (basestring, int, float))
-    def to_int(obj, to_cls):
+    @adapter(FizzBuzz, (basestring, int, float))
+    def from_fizz(obj, to_cls):
         return to_cls(obj)
 
     assert test(1, 2.3, 'fizz') == ('1', 2, 'fizz')
@@ -88,12 +103,12 @@ def test_bound_to():
     class SubClass(BaseClass):
         def get_self(self):
             return self
-            
+
 
 
     a = BaseClass()
     assert a.get_wrapped_self() == a
-    
+
 
     b = SubClass()
     assert b.get_wrapped_self() == b
@@ -123,14 +138,14 @@ def test_instance_bound_to():
 
     b = SubClass()
     assert b.get_wrapped_self() is b
-    assert b.get_wrapped_self() is b.get_self()        
+    assert b.get_wrapped_self() is b.get_self()
 
     assert id(b.get_wrapped_self().thing) == id(b.get_self().thing)
 
 
     c = SubClass()
     assert c.get_wrapped_self() is c
-    assert c.get_wrapped_self() is c.get_self()  
+    assert c.get_wrapped_self() is c.get_self()
 
     assert id(c.get_wrapped_self().thing) == id(c.get_self().thing)
 
@@ -175,7 +190,7 @@ def test_args():
 
     # Verify that if there are no adapters, *args pass through
     r = b.get_args(obj1, obj2, obj3)
-    
+
     assert r[0] is b
     assert r[1] is obj1
     assert r[2][0] is obj2
@@ -183,7 +198,7 @@ def test_args():
 
     # Verify that if there are adapters, positional args get adapted
     r = b.get_args_int('1', obj2, obj3)
-    
+
     assert r[0] is b
     assert r[1] == 1
     assert r[2][0] is obj2
@@ -208,6 +223,7 @@ def test_args():
     assert r[1] == 1
 
     assert get_arg_int(arg='1') == 1
+
 
 def test_kwargs():
     """
@@ -234,7 +250,7 @@ def test_kwargs():
     r = get_args(obj, foo='2', bar=3)
     assert r[0] is obj
     assert r[1]['foo'] == 2
-    assert r[1]['bar'] == '3'    
+    assert r[1]['bar'] == '3'
 
     r = t.get_args(arg=obj, foo='2', bar=3)
     assert r[0] is obj
@@ -244,38 +260,35 @@ def test_kwargs():
     r = get_args(arg=obj, foo='2', bar=3)
     assert r[0] is obj
     assert r[1]['foo'] == 2
-    assert r[1]['bar'] == '3'    
+    assert r[1]['bar'] == '3'
 
 
-def test_adapt_all_generator():
+def test_adapt_all_list():
     """
-    Verify adapt_all returns a generator
+    Verify adapt_all returns a list
     """
     int_like = ['1', 2.0]
-    
-    generator = adapt.adapt_all(int_like, int)
-    assert generator.next() == 1
-    assert generator.next() == 2
 
-    assert list(adapt.adapt_all(int_like, int)) == [1, 2]
+    r = adapt.adapt_all(int_like, int)
+    assert r[0] == 1
+    assert r[1] == 2
+
+    assert adapt.adapt_all(int_like, int) == [1, 2]
 
 
 def test_adapt_all_with_none():
     """
-    Verify passing None to adapt_all returns an empty generator
+    Verify passing None to adapt_all returns an empty list
     """
-    generator = adapt.adapt_all(None, int)
+    r = adapt.adapt_all(None, int)
+    assert r == []
+    assert type(r) == list
 
-    with pytest.raises(StopIteration):
-        generator.next()
-
-    assert list(adapt.adapt_all(None, int)) == []
-    
 
 def test_anticipate_list():
     """
-    Verify using a list for a parameter adapts the input to a generator
-    that adapts each value in the input.
+    Verify using a list for a parameter adapts expects an iterable
+    and adapts each value in the input.
     """
     @anticipate(items=[int])
     def get_list(items):
@@ -284,31 +297,89 @@ def test_anticipate_list():
     int_like = ['1', 2.0]
 
     r = get_list(int_like)
-    assert r.next() == 1
-    assert r.next() == 2.0
+    assert r[0] == 1
+    assert r[1] == 2.0
 
     # Works on list input
-    assert list(get_list(int_like)) == [1, 2]
+    assert get_list(int_like) == [1, 2]
 
     # Works on tuple input
-    assert list(get_list((4.0, 5.0, 6.0))) == [4, 5, 6]
+    assert get_list((4.0, 5.0, 6.0)) == [4, 5, 6]
 
     # Works on generator input
-    assert list(get_list(iter((4.0, 5.0, 6.0)))) == [4, 5, 6]
+    assert get_list(iter((4.0, 5.0, 6.0))) == [4, 5, 6]
 
 
 def test_anticipate_list_with_none():
     """
     Verify passing None for a parameter that expects a list returns an
-    empty generator.
+    empty list.
     """
     @anticipate(items=[int])
     def get_list(items):
         return items
 
-    generator = get_list(None)
-    with pytest.raises(StopIteration):
-        generator.next()
-    
-    assert list(get_list(None)) == []
+    r = get_list(None)
+    assert r == []
+    assert type(r) == list
 
+
+def test_anticipate_input():
+    """
+    Verify that input can be checked without calling inner function
+    """
+    @anticipate(items=[int], foo=basestring)
+    def get_list(items, foo=None):
+        return items, foo
+
+    with pytest.raises(AnticipateErrors) as exc_info:
+        get_list.input(items='a')
+
+    assert len(exc_info.value.errors) == 1
+    e = exc_info.value.errors[0]
+    assert isinstance(e, AnticipateParamError)
+    assert e.name == 'items'
+
+    with pytest.raises(AnticipateErrors) as exc_info:
+        get_list.input(items=[1], foo=1)
+
+    assert len(exc_info.value.errors) == 1
+    e = exc_info.value.errors[0]
+    assert isinstance(e, AnticipateParamError)
+    assert e.name == 'foo'
+
+    args, kwargs = get_list.input(['1', 2], foo='abc')
+    assert args == ([1, 2],)
+    assert kwargs == {'foo': 'abc'}
+
+
+def test_anticipate_wrong_params():
+    """
+    Verify that anticipate complains if you anticipate invalid parameters
+    """
+    with pytest.raises(KeyError):
+        @anticipate(foobar=int)
+        def noop(items):
+            pass
+
+    # Sanity check
+    @anticipate(items=int)
+    def noop(items):
+        pass
+
+
+def test_anticipate_custom_fields():
+    """
+    Verify that anticipate can use any object that implements `adapt`
+    as an anticipated type. This is good for things like SpringField fields.
+    """
+    class IntField(object):
+        def adapt(self, value):
+            return int(value)
+
+    @anticipate(num=IntField())
+    def get_num(num):
+        return num
+
+    assert get_num('1') == 1
+    assert get_num(2.33) == 2
