@@ -65,7 +65,7 @@ def adapt(obj, to_cls):
     """
     if obj is None:
         return obj
-    elif isinstance(obj, to_cls):
+    elif isinstance(to_cls, type) and isinstance(obj, to_cls):
         return obj
 
     errors = []
@@ -73,22 +73,29 @@ def adapt(obj, to_cls):
     if hasattr(obj, '__adapt__') and obj.__adapt__:
         try:
             return obj.__adapt__(to_cls)
-        except (AdaptError, TypeError) as e:
+        except (AdaptError, TypeError, ValueError) as e:
             ex_type, ex, tb = sys.exc_info()
             errors.append((obj.__adapt__, ex_type, ex, tb))
 
     if hasattr(to_cls, '__adapt__') and to_cls.__adapt__:
         try:
             return to_cls.__adapt__(obj)
-        except (AdaptError, TypeError) as e:
+        except (AdaptError, TypeError, ValueError) as e:
             ex_type, ex, tb = sys.exc_info()
             errors.append((to_cls.__adapt__, ex_type, ex, tb))
+
+    if hasattr(to_cls, 'adapt') and to_cls.adapt:
+        try:
+            return to_cls.adapt(obj)
+        except (AdaptError, TypeError, ValueError) as e:
+            ex_type, ex, tb = sys.exc_info()
+            errors.append((to_cls.adapt, ex_type, ex, tb))
 
     for k in get_adapter_path(obj, to_cls):
         if k in __adapters__:
             try:
                 return __adapters__[k](obj, to_cls)
-            except (AdaptError, TypeError) as e:
+            except (AdaptError, TypeError, ValueError) as e:
                 ex_type, ex, tb = sys.exc_info()
                 errors.append((__adapters__[k], ex_type, ex, tb))
                 break
@@ -98,15 +105,14 @@ def adapt(obj, to_cls):
 
 def adapt_all(iterable, to_cls):
     """
-    Returns a generator that will adapt all objects in an iterable to `cls`
+    Returns a list of items from adapting each item in iterable to `cls`
 
-    If `iterable` is `None`, an empty generator will be returned.
+    If `iterable` is `None`, an empty list will be returned.
     """
     if iterable is None:
-        # Use an empty tuple so we return an empty generator
-        iterable = ()
+        return []
 
-    return (adapt(obj, to_cls) for obj in iterable)
+    return [adapt(obj, to_cls) for obj in iterable]
 
 
 def register_adapter(from_classes, to_classes, func):
@@ -126,3 +132,10 @@ def register_adapter(from_classes, to_classes, func):
         if key in __adapters__:
             raise AdapterExists('%r to %r already exists.' % key)
         __adapters__[key] = func
+
+
+def clear_adapters():
+    """
+    Unregister any previously defined adapters.
+    """    
+    __adapters__.clear()
