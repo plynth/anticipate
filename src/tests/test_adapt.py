@@ -245,5 +245,12 @@ def test_kwargs():
     assert r[1]['bar'] == '3'    
 
 
+def test_list():
+    @anticipate(stringz=[basestring])
+    def t(stringz=None):
+        assert list(stringz) == list(stringz)
+
+    t([])
+    t(['a', 'b', 'c'])
 
 

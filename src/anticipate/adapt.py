@@ -99,7 +99,7 @@ def adapt_all(iter, to_cls):
     """
     Returns a generator that will adapt all objects in an iterable to `cls`
     """
-    return (adapt(obj, to_cls) for obj in iter)
+    return [adapt(obj, to_cls) for obj in iter]
 
 def register_adapter(from_classes, to_classes, func):
     """
