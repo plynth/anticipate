@@ -3,6 +3,7 @@
 *.pyo
 *.egg-info
 *.idea
+.eggs
 dist
 __pycache__
 MANIFEST
