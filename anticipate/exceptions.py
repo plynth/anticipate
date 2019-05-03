@@ -1,3 +1,6 @@
+from builtins import str
+
+
 class AnticipateError(Exception):
     """
     General error for anticipate

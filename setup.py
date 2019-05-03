@@ -2,7 +2,6 @@ import os
 import sys
 from setuptools import setup
 
-
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist bdist_wheel')
     os.system('twine upload dist/*')
@@ -40,4 +39,7 @@ setup(
     tests_require=tests_require,
     extras_require=dict(test=tests_require),
     setup_requires=['pytest-runner'] if {'pytest', 'test'}.intersection(sys.argv) else [],
+    install_requires=[
+        'future==0.17.1',
+    ],
 )
