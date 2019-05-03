@@ -1,8 +1,7 @@
 import pytest
 from anticipate import adapt, adapter, anticipate
 from anticipate.adapt import clear_adapters
-from anticipate.exceptions import AnticipateParamError, AnticipateErrors, \
-    AnticipateError
+from anticipate.exceptions import AnticipateParamError, AnticipateErrors
 
 
 def setup_function(function):
@@ -50,6 +49,7 @@ def test_mro():
     s = adapt.adapt(bar, Zam)
 
     assert s == 'Adapted to zip'
+
 
 def test_adapt_params():
     @anticipate(foo=str, bar=int)
@@ -383,3 +383,27 @@ def test_anticipate_custom_fields():
 
     assert get_num('1') == 1
     assert get_num(2.33) == 2
+
+
+def test_anticipate_custom_fields_list():
+    """
+    Verify that anticipate can use any object that implements ``adapt``
+    as an anticipated list of type. This is good for things like
+    SpringField fields.
+    """
+    class IntField(object):
+        def adapt(self, value):
+            return int(value)
+
+    @anticipate(IntField(), nums=[IntField()])
+    def get_sum(nums):
+        return sum(nums)
+
+    @anticipate([IntField()], strings=[str])
+    def get_as_int(strings):
+        return strings
+
+    assert get_sum(['1', '2']) == 3
+    assert get_sum([2.33, 1.33]) == 3
+
+    assert get_as_int(['2', '1']) == [2, 1]
