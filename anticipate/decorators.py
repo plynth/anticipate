@@ -1,11 +1,14 @@
 from __future__ import absolute_import
 
 from functools import partial, update_wrapper
-from itertools import izip
-
 import inspect
+
+from builtins import zip
+from builtins import object
+
 from anticipate.adapt import AdaptError, AdaptErrors, adapt, adapt_all, register_adapter
 from anticipate.exceptions import AnticipateErrors, AnticipateParamError
+
 
 __all__ = [
     'adapter',
@@ -110,7 +113,7 @@ class anticipate_wrapper(object):
         if args and self.arg_names:
             args = list(args)
             # Replace args inline that have adapters
-            for i, (key, val) in enumerate(izip(self.arg_names, args)):
+            for i, (key, val) in enumerate(zip(self.arg_names, args)):
                 try:
                     args[i] = self._adapt_param(key, val)
                 except AnticipateParamError as e:

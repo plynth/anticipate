@@ -1,3 +1,5 @@
+from past.builtins import basestring
+from builtins import object
 import pytest
 from anticipate import adapt, adapter, anticipate
 from anticipate.adapt import clear_adapters
@@ -11,7 +13,7 @@ def setup_function(function):
     clear_adapters()
 
     # Setup a basic int adapter for all tests
-    @adapter((basestring, float, int), (int, basestring))
+    @adapter((str, float, int), (int, str))
     def to_int(obj, to_cls):
         return to_cls(obj)
 
@@ -63,7 +65,7 @@ def test_adapt_params():
         def __int__(self):
             return 22
 
-    @adapter(FizzBuzz, (basestring, int, float))
+    @adapter(FizzBuzz, (str, int, float))
     def from_fizz(obj, to_cls):
         return to_cls(obj)
 
@@ -104,11 +106,8 @@ def test_bound_to():
         def get_self(self):
             return self
 
-
-
     a = BaseClass()
     assert a.get_wrapped_self() == a
-
 
     b = SubClass()
     assert b.get_wrapped_self() == b
@@ -141,7 +140,6 @@ def test_instance_bound_to():
     assert b.get_wrapped_self() is b.get_self()
 
     assert id(b.get_wrapped_self().thing) == id(b.get_self().thing)
-
 
     c = SubClass()
     assert c.get_wrapped_self() is c

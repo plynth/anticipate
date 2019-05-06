@@ -5,7 +5,7 @@ Changelog
 0.9.0
 =====
 
-* Dropped support for Python 2.6 in anticipation of Python 3 support
+* Dropped support for Python 2.6, added support for Python 3.7.
 * Cleaned up code formatting
 
 Bug Fixes
