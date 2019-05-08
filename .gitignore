@@ -1,8 +1,10 @@
 .DS_Store
+.python-version
 *.pyc
 *.pyo
 *.egg-info
 *.idea
+.eggs
 dist
 __pycache__
 MANIFEST

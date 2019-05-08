@@ -1,3 +1,4 @@
+from __future__ import print_function
 from fabric.api import local, task, abort, settings
 from clom import clom
 from fabric.contrib.console import confirm

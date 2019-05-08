@@ -1,13 +1,22 @@
+from __future__ import absolute_import
+
+from functools import partial, update_wrapper
 import inspect
-import types
-from anticipate.adapt import adapt, adapt_all, register_adapter, AdaptError, AdaptErrors
-import sys
-from functools import partial, update_wrapper, wraps
-from itertools import izip
+
+from builtins import zip
+from builtins import object
+
+from anticipate.adapt import AdaptError, AdaptErrors, adapt, adapt_all, register_adapter
 from anticipate.exceptions import AnticipateErrors, AnticipateParamError
 
 
-__all__ = []
+__all__ = [
+    'adapter',
+    'anticipate',
+    'anticipate_wrapper',
+    'register_adapter',
+    'strictly_anticipate',
+]
 
 
 class anticipate_wrapper(object):
@@ -104,7 +113,7 @@ class anticipate_wrapper(object):
         if args and self.arg_names:
             args = list(args)
             # Replace args inline that have adapters
-            for i, (key, val) in enumerate(izip(self.arg_names, args)):
+            for i, (key, val) in enumerate(zip(self.arg_names, args)):
                 try:
                     args[i] = self._adapt_param(key, val)
                 except AnticipateParamError as e:
@@ -179,7 +188,7 @@ class anticipate_wrapper(object):
         Runs `func` over each item in the iterable and returns a list.
         Returns an empty list if iterable is `None`.
         """
-        if value is None:
+        if func is None:
             return []
         return [func(obj) for obj in iterable]
 

@@ -31,3 +31,4 @@ Expect the unexpected, but get what you want.
 
 Works much better with your own objects or with `SpringField <https://github.com/six8/springfield>`_
 
+.. include:: changelog.rst

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import inspect
 import itertools
 import sys
@@ -7,16 +9,21 @@ __adapters__ = {}
 __mro__ = {}
 __all__ = [
     'AdaptError',
+    'AdaptErrors',
     'AdapterExists',
     'adapt',
     'adapt_all',
     'register_adapter',
+    'clear_adapters',
 ]
+
 
 class AdaptError(Exception):
     pass
 
+
 class AdaptErrors(AdaptError):
+
     def __init__(self, message, errors=None):
         super(AdaptErrors, self).__init__(message)
         self.errors = []
@@ -40,8 +47,10 @@ class AdaptErrors(AdaptError):
             output.append(''.join(traceback.format_tb(e[3])))
         return '\n'.join(output)
 
+
 class AdapterExists(Exception):
     pass
+
 
 def get_adapter_path(obj, to_cls):
     """
@@ -53,6 +62,7 @@ def get_adapter_path(obj, to_cls):
         __mro__[key] = list(itertools.product(inspect.getmro(from_cls), inspect.getmro(to_cls)))
 
     return __mro__[key]
+
 
 def adapt(obj, to_cls):
     """

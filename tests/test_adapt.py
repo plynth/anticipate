@@ -1,8 +1,9 @@
+from past.builtins import basestring
+from builtins import object
 import pytest
 from anticipate import adapt, adapter, anticipate
 from anticipate.adapt import clear_adapters
-from anticipate.exceptions import AnticipateParamError, AnticipateErrors, \
-    AnticipateError
+from anticipate.exceptions import AnticipateParamError, AnticipateErrors
 
 
 def setup_function(function):
@@ -12,7 +13,7 @@ def setup_function(function):
     clear_adapters()
 
     # Setup a basic int adapter for all tests
-    @adapter((basestring, float, int), (int, basestring))
+    @adapter((str, float, int), (int, str))
     def to_int(obj, to_cls):
         return to_cls(obj)
 
@@ -51,6 +52,7 @@ def test_mro():
 
     assert s == 'Adapted to zip'
 
+
 def test_adapt_params():
     @anticipate(foo=str, bar=int)
     def test(foo, bar, zing):
@@ -63,7 +65,7 @@ def test_adapt_params():
         def __int__(self):
             return 22
 
-    @adapter(FizzBuzz, (basestring, int, float))
+    @adapter(FizzBuzz, (str, int, float))
     def from_fizz(obj, to_cls):
         return to_cls(obj)
 
@@ -104,11 +106,8 @@ def test_bound_to():
         def get_self(self):
             return self
 
-
-
     a = BaseClass()
     assert a.get_wrapped_self() == a
-
 
     b = SubClass()
     assert b.get_wrapped_self() == b
@@ -141,7 +140,6 @@ def test_instance_bound_to():
     assert b.get_wrapped_self() is b.get_self()
 
     assert id(b.get_wrapped_self().thing) == id(b.get_self().thing)
-
 
     c = SubClass()
     assert c.get_wrapped_self() is c
@@ -383,3 +381,27 @@ def test_anticipate_custom_fields():
 
     assert get_num('1') == 1
     assert get_num(2.33) == 2
+
+
+def test_anticipate_custom_fields_list():
+    """
+    Verify that anticipate can use any object that implements ``adapt``
+    as an anticipated list of type. This is good for things like
+    SpringField fields.
+    """
+    class IntField(object):
+        def adapt(self, value):
+            return int(value)
+
+    @anticipate(IntField(), nums=[IntField()])
+    def get_sum(nums):
+        return sum(nums)
+
+    @anticipate([IntField()], strings=[str])
+    def get_as_int(strings):
+        return strings
+
+    assert get_sum(['1', '2']) == 3
+    assert get_sum([2.33, 1.33]) == 3
+
+    assert get_as_int(['2', '1']) == [2, 1]
