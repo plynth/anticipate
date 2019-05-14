@@ -6,7 +6,7 @@ if sys.argv[-1] in ('build', 'publish'):
     check_call(
         # Use `which` because rst_inc does not (in 1.04) have a sh-bang
         # to execute Python automatically.
-        'python `which rst_inc.py` include -s ./_README.rst -t ./README.rst', shell=True)
+        'rst_include include -s ./_README.rst -t ./README.rst', shell=True)
     check_call('python setup.py sdist bdist_wheel', shell=True)
     if sys.argv[-1] == 'publish':
         check_call('twine upload dist/*', shell=True)
