@@ -4,8 +4,6 @@ from setuptools import setup
 
 if sys.argv[-1] in ('build', 'publish'):
     check_call(
-        # Use `which` because rst_inc does not (in 1.04) have a sh-bang
-        # to execute Python automatically.
         'rst_include include -s ./_README.rst -t ./README.rst', shell=True)
     check_call('python setup.py sdist bdist_wheel', shell=True)
     if sys.argv[-1] == 'publish':
