@@ -1,12 +1,12 @@
 dist: xenial   # required for Python >= 3.7
 language: python
 python:
-  - "2.7"
   - "3.6"
   - "3.7"
   - "3.8"
   - "3.9"
   - "pypy3.5"
+  - "3.10-dev"
 install:
   - pip install pytest
   - pip install .
