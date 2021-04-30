@@ -47,7 +47,4 @@ setup(
     tests_require=tests_require,
     extras_require=dict(test=tests_require),
     setup_requires=['pytest-runner'] if {'pytest', 'test'}.intersection(sys.argv) else [],
-    install_requires=[
-        'future==0.17.1',
-    ],
 )

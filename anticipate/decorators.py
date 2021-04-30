@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from functools import partial, update_wrapper
 
 from builtins import zip
@@ -7,15 +5,8 @@ from builtins import object
 
 from anticipate.adapt import AdaptError, AdaptErrors, adapt, adapt_all, register_adapter
 from anticipate.exceptions import AnticipateErrors, AnticipateParamError
-try:
-    # Support for python 3
-    from inspect import getfullargspec
-except ImportError:
-    # Support for python 2
-    from inspect import getargspec
-else:
-    def getargspec(func):
-        return getfullargspec(func)[:4]
+
+from inspect import getfullargspec
 
 __all__ = [
     'adapter',
@@ -39,7 +30,7 @@ class anticipate_wrapper(object):
         self._adapt_result = self._get_adapter(self.returns) if self.returns else None
         self.strict = strict
 
-        args, _, kwargs, _ = getargspec(func)
+        args, _, kwargs, _ = getfullargspec(func)[:4]
 
         self.arg_names = args
 

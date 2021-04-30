@@ -1,4 +1,3 @@
-from past.builtins import basestring
 from builtins import object
 import pytest
 from anticipate import adapt, adapter, anticipate
@@ -326,7 +325,7 @@ def test_anticipate_input():
     """
     Verify that input can be checked without calling inner function
     """
-    @anticipate(items=[int], foo=basestring)
+    @anticipate(items=[int], foo=str)
     def get_list(items, foo=None):
         return items, foo
 
@@ -338,13 +337,9 @@ def test_anticipate_input():
     assert isinstance(e, AnticipateParamError)
     assert e.name == 'items'
 
-    with pytest.raises(AnticipateErrors) as exc_info:
-        get_list.input(items=[1], foo=1)
-
-    assert len(exc_info.value.errors) == 1
-    e = exc_info.value.errors[0]
-    assert isinstance(e, AnticipateParamError)
-    assert e.name == 'foo'
+    args,kwargs = get_list.input(items=[1], foo=1)
+    assert args == ()
+    assert kwargs == {'items':[1],'foo':'1'}
 
     args, kwargs = get_list.input(['1', 2], foo='abc')
     assert args == ([1, 2],)
